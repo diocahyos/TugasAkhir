@@ -1,7 +1,11 @@
 <?php
 class RekomendasiMakanan extends CI_Controller
 {
-
+	function __construct()
+	{
+		parent::__construct();
+		$this->load->model('MMakanan');
+	}
 	// Next cek proses algoritmanya menawa ada yg gak bener sama perulangan yang makek if 
 	// diushakan kayak pembangkitan awal
 
@@ -11,6 +15,7 @@ class RekomendasiMakanan extends CI_Controller
 	// exit();
 	public function index()
 	{
+
 		// Ini kalok mau ke view input parameter
 		// if ($this->input->post('process')) {
 		// 	$input = $this->input->post(NULL, TRUE);
@@ -25,18 +30,182 @@ class RekomendasiMakanan extends CI_Controller
 
 			$keb_gizi = $this->hitung_keb_gizi($input);
 
-			$rekom = $this->rekom_makanan($keb_gizi);
-			// $rekom1 = $this->rekom_makanan($keb_gizi);
-			// $rekom2 = $this->rekom_makanan($keb_gizi);
+			// Mengambil total indeks pada setiap kategori makanan
+			$tmakananpokok =	$this->MMakanan->get_total_makanan_pokok();
+			$tsumberhewani =	$this->MMakanan->get_total_sumber_hewani();
+			$tsumbernabati =	$this->MMakanan->get_total_sumber_nabati();
+			$tsayuran =	$this->MMakanan->get_total_sayuran();
+			$tbuah =	$this->MMakanan->get_total_buah();
+
+			// Mengambil data pada setiap kategori makanan
+			$makananpokok = $this->MMakanan->get_makanan_pokok();
+			$sumberhewani = $this->MMakanan->get_sumber_hewani();
+			$sumbernabati = $this->MMakanan->get_sumber_nabati();
+			$sayuran = $this->MMakanan->get_sayuran();
+			$buah = $this->MMakanan->get_buah();
+
+			// Memasukkan data makanan ke variabel makanan
+			$makanan = array(
+				'makananpokok' => $makananpokok,
+				'sumberhewani' => $sumberhewani,
+				'sumbernabati' => $sumbernabati,
+				'sayuran' => $sayuran,
+				'buah' => $buah
+			);
+
+			// Menyimpan total pada setiap kategori makanan
+			$tmakanan = array(
+				'tmakananpokok' => $tmakananpokok,
+				'tsumberhewani' => $tsumberhewani,
+				'tsumbernabati' => $tsumbernabati,
+				'tsayuran' => $tsayuran,
+				'tbuah' => $tbuah
+			);
+
+			$batas = array(
+				'1' => $tmakananpokok,
+				'2' => $tsumberhewani,
+				'3' => $tsumbernabati,
+				'4' => $tsayuran,
+				'5' => $tbuah,
+				'6' => $tmakananpokok,
+				'7' => $tsumberhewani,
+				'8' => $tsumbernabati,
+				'9' => $tsayuran,
+				'10' => $tbuah,
+				'11' => $tmakananpokok,
+				'12' => $tsumberhewani,
+				'13' => $tsumbernabati,
+				'14' => $tsayuran,
+				'15' => $tbuah,
+			);
+
+			$rekom1 = $this->rekom_makanan($keb_gizi, $makanan, $tmakanan, $batas);
+
+			$solusi = $rekom1;
+
+			$simpan[1][1]['id_makanan'] = 0;
+			$simpan[2][1]['id_makanan'] = 0;
+			$simpan[3][1]['id_makanan'] = 0;
+			$simpan[4][1]['id_makanan'] = 0;
+			$simpan[5][1]['id_makanan'] = 0;
+
+			// Penghapusan data yang sudah menjadi alternatif pertama rekomendasi makanan 
+			for ($i = 1; $i <= 15; $i += 5) {
+				// Makanan Pokok
+				for ($mp = 1; $mp <= count($simpan[1]); $mp++) {
+					if ($solusi[$i]->id_makanan != $simpan[1][$mp]['id_makanan']) {
+						// Menyimpan kode makanan untuk mengganti kode makanan pada makanan pokok setelah diganti nantinya
+						$simpan[1][$mp + 1]['kode_makanan'] = $solusi[$i]->kode_makanan;
+						// Menggantikan data makanan yang sudah terpilih di alternatif 1 dengan data terakhir pada makanan pokok
+						$makananpokok[$solusi[$i]->kode_makanan - 1] = $makananpokok[$tmakananpokok - 1];
+						// Menggantikan kode makanan yang sebelumnya digantikan menjadi kode makanan yang tersimpan / terpilih di alternatif 1
+						$makananpokok[$solusi[$i]->kode_makanan - 1]->kode_makanan = $simpan[1][$mp + 1]['kode_makanan'];
+						// Menyimpan id makanan yang nanti digunakan untuk pengecekan
+						$simpan[1][$mp + 1]['id_makanan'] = $solusi[$i]->id_makanan;
+						// Menghapus data terakhir makanan pokok
+						unset($makananpokok[$tmakananpokok - 1]);
+						// Mengurangi total makanan pokok
+						$tmakananpokok--;
+					}
+				}
+
+				// Sumber Hewani
+				for ($sh = 1; $sh <= count($simpan[2]); $sh++) {
+					if ($solusi[$i + 1]->id_makanan != $simpan[2][$sh]['id_makanan']) {
+						$simpan[2][$sh + 1]['kode_makanan'] = $solusi[$i + 1]->kode_makanan;
+						$sumberhewani[$solusi[$i + 1]->kode_makanan - 1] = $sumberhewani[$tsumberhewani - 1];
+						$sumberhewani[$solusi[$i + 1]->kode_makanan - 1]->kode_makanan = $simpan[2][$sh + 1]['kode_makanan'];
+						$simpan[2][$sh + 1]['id_makanan'] = $solusi[$i + 1]->id_makanan;
+						unset($sumberhewani[$tsumberhewani - 1]);
+						$tsumberhewani--;
+					}
+				}
+
+				// Sumber Nabati
+				for ($nb = 1; $nb <= count($simpan[3]); $nb++) {
+					if ($solusi[$i + 2]->id_makanan != $simpan[3][$nb]['id_makanan']) {
+						$simpan[3][$nb + 1]['kode_makanan'] = $solusi[$i + 2]->kode_makanan;
+						$sumbernabati[$solusi[$i + 2]->kode_makanan - 1] = $sumbernabati[$tsumbernabati - 1];
+						$sumbernabati[$solusi[$i + 2]->kode_makanan - 1]->kode_makanan = $simpan[3][$nb + 1]['kode_makanan'];
+						$simpan[3][$nb + 1]['id_makanan'] = $solusi[$i + 2]->id_makanan;
+						unset($sumbernabati[$tsumbernabati - 1]);
+						$tsumbernabati--;
+					}
+				}
+
+				// Sayuran
+				for ($s = 1; $s <= count($simpan[4]); $s++) {
+					if ($solusi[$i + 3]->id_makanan != $simpan[4][$s]['id_makanan']) {
+						$simpan[4][$s + 1]['kode_makanan'] = $solusi[$i + 3]->kode_makanan;
+						$sayuran[$solusi[$i + 3]->kode_makanan - 1] = $sayuran[$tsayuran - 1];
+						$sayuran[$solusi[$i + 3]->kode_makanan - 1]->kode_makanan = $simpan[4][$s + 1]['kode_makanan'];
+						$simpan[4][$s + 1]['id_makanan'] = $solusi[$i + 3]->id_makanan;
+						unset($sayuran[$tsayuran - 1]);
+						$tsayuran--;
+					}
+				}
+
+				// Buah
+				for ($b = 1; $b <= count($simpan[5]); $b++) {
+					if ($solusi[$i + 4]->id_makanan != $simpan[5][$b]['id_makanan']) {
+						$simpan[5][$b + 1]['kode_makanan'] = $solusi[$i + 4]->kode_makanan;
+						$buah[$solusi[$i + 4]->kode_makanan - 1] = $buah[$tbuah - 1];
+						$buah[$solusi[$i + 4]->kode_makanan - 1]->kode_makanan = $simpan[5][$b + 1]['kode_makanan'];
+						$simpan[5][$b + 1]['id_makanan'] = $solusi[$i + 4]->id_makanan;
+						unset($buah[$tbuah - 1]);
+						$tbuah--;
+					}
+				}
+			}
+
+			// Memperbaharui variable makanan setelah proses penghapusan diatas
+			$makanan = array(
+				'makananpokok' => $makananpokok,
+				'sumberhewani' => $sumberhewani,
+				'sumbernabati' => $sumbernabati,
+				'sayuran' => $sayuran,
+				'buah' => $buah
+			);
+
+			// Memperbaharui total pada setiap kategori makanan
+			$tmakanan = array(
+				'tmakananpokok' => $tmakananpokok,
+				'tsumberhewani' => $tsumberhewani,
+				'tsumbernabati' => $tsumbernabati,
+				'tsayuran' => $tsayuran,
+				'tbuah' => $tbuah
+			);
+
+			// Memperbaharui variable batas setelah proses pengurangan total data makanan pada setiap kategori makanan diatas
+			$batas = array(
+				'1' => $tmakananpokok,
+				'2' => $tsumberhewani,
+				'3' => $tsumbernabati,
+				'4' => $tsayuran,
+				'5' => $tbuah,
+				'6' => $tmakananpokok,
+				'7' => $tsumberhewani,
+				'8' => $tsumbernabati,
+				'9' => $tsayuran,
+				'10' => $tbuah,
+				'11' => $tmakananpokok,
+				'12' => $tsumberhewani,
+				'13' => $tsumbernabati,
+				'14' => $tsayuran,
+				'15' => $tbuah,
+			);
+
+			$rekom2 = $this->rekom_makanan($keb_gizi, $makanan, $tmakanan, $batas);
 
 			$data[1] = $keb_gizi;
-			// $data[3] = $rekom1[1]['hasil'];
-			$data[3] = $rekom[1]['hasil'];
-			unset($rekom[1]['hasil']);
-			$data[2][1] = $rekom[1];
-			$data[2][2] = $rekom[2];
-			// $data[2][1] = $rekom1[1];
-			// $data[2][2] = $rekom2[1];
+			$data[3] = $rekom1['hasil'];
+			// $data[3] = $rekom[1]['hasil'];
+			unset($rekom1['hasil']);
+			// $data[2][1] = $rekom[1];
+			// $data[2][2] = $rekom[2];
+			$data[2][1] = $rekom1;
+			$data[2][2] = $rekom2;
 
 			$data['title'] = 'Hasil Rekomendasi Makanan';
 			$data['content'] = 'vhasil_rekomendasi.php';
@@ -274,11 +443,14 @@ class RekomendasiMakanan extends CI_Controller
 		return $hasil;
 	}
 
-	private function rekom_makanan($keb_gizi)
+	private function rekom_makanan($keb_gizi, $makanan, $tmakanan, $batas)
 	{
 		set_time_limit(0);
 
 		extract($keb_gizi);
+		extract($makanan);
+		extract($tmakanan);
+		extract($batas);
 
 		$jpopulasi = 100;
 		$jgenerasi = 120;
@@ -286,30 +458,6 @@ class RekomendasiMakanan extends CI_Controller
 		$mr = 0.4;
 		$kmax = 12;
 		$iterasils = 2000;
-
-		$this->load->model('MMakanan');
-		// Mengambil total indeks pada setiap kategori makanan
-		$tmakananpokok =	$this->MMakanan->get_total_makanan_pokok();
-		$tsumberhewani =	$this->MMakanan->get_total_sumber_hewani();
-		$tsumbernabati =	$this->MMakanan->get_total_sumber_nabati();
-		$tsayuran =	$this->MMakanan->get_total_sayuran();
-		$tbuah =	$this->MMakanan->get_total_buah();
-
-		// Mengambil data pada setiap kategori makanan
-		$makananpokok = $this->MMakanan->get_makanan_pokok();
-		$sumberhewani = $this->MMakanan->get_sumber_hewani();
-		$sumbernabati = $this->MMakanan->get_sumber_nabati();
-		$sayuran = $this->MMakanan->get_sayuran();
-		$buah = $this->MMakanan->get_buah();
-
-		// Memasukkan data makanan ke variabel makanan
-		$makanan = array(
-			'makananpokok' => $makananpokok,
-			'sumberhewani' => $sumberhewani,
-			'sumbernabati' => $sumbernabati,
-			'sayuran' => $sayuran,
-			'buah' => $buah
-		);
 
 		$KebutuhanPasien = array(
 			'karbohidrat' => $Kkarbohidrat,
@@ -324,24 +472,6 @@ class RekomendasiMakanan extends CI_Controller
 		$parametervns = array(
 			'kmax' => $kmax,
 			'iterasils' => $iterasils
-		);
-
-		$batas = array(
-			'1' => $tmakananpokok,
-			'2' => $tsumberhewani,
-			'3' => $tsumbernabati,
-			'4' => $tsayuran,
-			'5' => $tbuah,
-			'6' => $tmakananpokok,
-			'7' => $tsumberhewani,
-			'8' => $tsumbernabati,
-			'9' => $tsayuran,
-			'10' => $tbuah,
-			'11' => $tmakananpokok,
-			'12' => $tsumberhewani,
-			'13' => $tsumbernabati,
-			'14' => $tsayuran,
-			'15' => $tbuah,
 		);
 
 		$tawal = microtime(TRUE);
@@ -367,7 +497,6 @@ class RekomendasiMakanan extends CI_Controller
 				// 	$populasi[$i][$j] = rand(1, $tbuah);
 				// }
 			}
-			// $populasi[$i]['cek'] = 0;
 		}
 
 		$generasi = 1;
@@ -497,182 +626,34 @@ class RekomendasiMakanan extends CI_Controller
 		$lama = $takhir - $tawal;
 
 		// Memasukkan hasil populasi terbaik yang berada pada indeks 1 ke dalam variabel data
-		$data[1] = $populasi[1];
-		$alternatif[0] = $populasi[1];
+		$data = $populasi[1];
 
 		// Mengganti gen yang berupa integer menjadi data makanan pada setiap kategori
 		for ($in = 1; $in <= 15; $in = $in + 5) {
 			//Individu terbaik 1
-			$data[1][$in] = $makananpokok[$data[1][$in] - 1];
-			$data[1][$in + 1] = $sumberhewani[$data[1][$in + 1] - 1];
-			$data[1][$in + 2] = $sumbernabati[$data[1][$in + 2] - 1];
-			$data[1][$in + 3] = $sayuran[$data[1][$in + 3] - 1];
-			$data[1][$in + 4] = $buah[$data[1][$in + 4] - 1];
+			$data[$in] = $makananpokok[$data[$in] - 1];
+			$data[$in + 1] = $sumberhewani[$data[$in + 1] - 1];
+			$data[$in + 2] = $sumbernabati[$data[$in + 2] - 1];
+			$data[$in + 3] = $sayuran[$data[$in + 3] - 1];
+			$data[$in + 4] = $buah[$data[$in + 4] - 1];
 		}
-		$solusi = $data[1];
 
 		// Perhitungan selisih dalam persen (%) kecuali natrium Individu terbaik 1
-		$selisihKarbo = round(($data[1]['pinaltiKarbo'] / $KebutuhanPasien['karbohidrat']) * 100, 2);
-		$selisihProtein = round(($data[1]['pinaltiProtein'] / $KebutuhanPasien['protein']) * 100, 2);
-		$selisihLemak = round(($data[1]['pinaltiLemak'] / $KebutuhanPasien['lemak']) * 100, 2);
-		$selisihNatrium = abs($data[1]['totalNatrium'] - $KebutuhanPasien['natrium2']);
-		$selisihKalori = round(($data[1]['pinaltiKalori'] / $KebutuhanPasien['kalori']) * 100, 2);
-		$selisihKalium = round(($data[1]['pinaltiKalium'] / ($KebutuhanPasien['kalium'])) * 100, 2);
+		$selisihKarbo = round(($data['pinaltiKarbo'] / $KebutuhanPasien['karbohidrat']) * 100, 2);
+		$selisihProtein = round(($data['pinaltiProtein'] / $KebutuhanPasien['protein']) * 100, 2);
+		$selisihLemak = round(($data['pinaltiLemak'] / $KebutuhanPasien['lemak']) * 100, 2);
+		$selisihNatrium = abs($data['totalNatrium'] - $KebutuhanPasien['natrium2']);
+		$selisihKalori = round(($data['pinaltiKalori'] / $KebutuhanPasien['kalori']) * 100, 2);
+		$selisihKalium = round(($data['pinaltiKalium'] / ($KebutuhanPasien['kalium'])) * 100, 2);
 
-		$data[1]['selisihKarbo'] = $selisihKarbo;
-		$data[1]['selisihProtein'] = $selisihProtein;
-		$data[1]['selisihLemak'] = $selisihLemak;
-		$data[1]['selisihNatrium'] = $selisihNatrium;
-		$data[1]['selisihKalori'] = $selisihKalori;
-		$data[1]['selisihKalium'] = $selisihKalium;
-		$data[1]['waktu'] = $lama;
-		$data[1]['hasil'] = $fitness;
-
-		$simpan[1][1]['id_makanan'] = 0;
-		$simpan[2][1]['id_makanan'] = 0;
-		$simpan[3][1]['id_makanan'] = 0;
-		$simpan[4][1]['id_makanan'] = 0;
-		$simpan[5][1]['id_makanan'] = 0;
-		// Penghapusan data yang sudah menjadi alternatif pertama rekomendasi makanan 
-		for ($i = 6; $i <= 15; $i += 5) {
-			// Makanan Pokok
-			for ($mp = 1; $mp <= count($simpan[1]); $mp++) {
-				if ($solusi[$i]->id_makanan != $simpan[1][$mp]['id_makanan']) {
-					// Menyimpan kode makanan untuk mengganti kode makanan pada makanan pokok setelah diganti nantinya
-					$simpan[1][$mp + 1]['kode_makanan'] = $solusi[$i]->kode_makanan;
-					// Menggantikan data makanan yang sudah terpilih di alternatif 1 dengan data terakhir pada makanan pokok
-					$makananpokok[$solusi[$i]->kode_makanan - 1] = $makananpokok[$tmakananpokok - 1];
-					// Menggantikan kode makanan yang sebelumnya digantikan menjadi kode makanan yang tersimpan / terpilih di alternatif 1
-					$makananpokok[$solusi[$i]->kode_makanan - 1]->kode_makanan = $simpan[1][$mp + 1]['kode_makanan'];
-					// Menyimpan id makanan yang nanti digunakan untuk pengecekan
-					$simpan[1][$mp + 1]['id_makanan'] = $solusi[$i]->id_makanan;
-					// Menghapus data terakhir makanan pokok
-					unset($makananpokok[$tmakananpokok - 1]);
-					// Mengurangi total makanan pokok
-					$tmakananpokok--;
-				}
-			}
-
-			// Sumber Hewani
-			for ($sh = 1; $sh <= count($simpan[2]); $sh++) {
-				if ($solusi[$i + 1]->id_makanan != $simpan[2][$sh]['id_makanan']) {
-					$simpan[2][$sh + 1]['kode_makanan'] = $solusi[$i + 1]->kode_makanan;
-					$sumberhewani[$solusi[$i + 1]->kode_makanan - 1] = $sumberhewani[$tsumberhewani - 1];
-					$sumberhewani[$solusi[$i + 1]->kode_makanan - 1]->kode_makanan = $simpan[2][$sh + 1]['kode_makanan'];
-					$simpan[2][$sh + 1]['id_makanan'] = $solusi[$i + 1]->id_makanan;
-					unset($sumberhewani[$tsumberhewani - 1]);
-					$tsumberhewani--;
-				}
-			}
-
-			// Sumber Nabati
-			for ($nb = 1; $nb <= count($simpan[3]); $nb++) {
-				if ($solusi[$i + 2]->id_makanan != $simpan[3][$nb]['id_makanan']) {
-					$simpan[3][$nb + 1]['kode_makanan'] = $solusi[$i + 2]->kode_makanan;
-					$sumbernabati[$solusi[$i + 2]->kode_makanan - 1] = $sumbernabati[$tsumbernabati - 1];
-					$sumbernabati[$solusi[$i + 2]->kode_makanan - 1]->kode_makanan = $simpan[3][$nb + 1]['kode_makanan'];
-					$simpan[3][$nb + 1]['id_makanan'] = $solusi[$i + 2]->id_makanan;
-					unset($sumbernabati[$tsumbernabati - 1]);
-					$tsumbernabati--;
-				}
-			}
-
-			// Sayuran
-			for ($s = 1; $s <= count($simpan[4]); $s++) {
-				if ($solusi[$i + 3]->id_makanan != $simpan[4][$s]['id_makanan']) {
-					$simpan[4][$s + 1]['kode_makanan'] = $solusi[$i + 3]->kode_makanan;
-					$sayuran[$solusi[$i + 3]->kode_makanan - 1] = $sayuran[$tsayuran - 1];
-					$sayuran[$solusi[$i + 3]->kode_makanan - 1]->kode_makanan = $simpan[4][$s + 1]['kode_makanan'];
-					$simpan[4][$s + 1]['id_makanan'] = $solusi[$i + 3]->id_makanan;
-					unset($sayuran[$tsayuran - 1]);
-					$tsayuran--;
-				}
-			}
-
-			// Buah
-			for ($b = 1; $b <= count($simpan[5]); $b++) {
-				if ($solusi[$i + 4]->id_makanan != $simpan[5][$b]['id_makanan']) {
-					$simpan[5][$b + 1]['kode_makanan'] = $solusi[$i + 4]->kode_makanan;
-					$buah[$solusi[$i + 4]->kode_makanan - 1] = $buah[$tbuah - 1];
-					$buah[$solusi[$i + 4]->kode_makanan - 1]->kode_makanan = $simpan[5][$b + 1]['kode_makanan'];
-					$simpan[5][$b + 1]['id_makanan'] = $solusi[$i + 4]->id_makanan;
-					unset($buah[$tbuah - 1]);
-					$tbuah--;
-				}
-			}
-		}
-
-		// Pengecekkan jika ada data yag lebih dari total data makanan pada setiap kategori makanan
-		// Selanjutnya diperbaharui menjadi sama dengan total data makanan yang sekarang
-		for ($i = 1; $i <= 15; $i += 5) {
-			if ($alternatif[0][$i] > $tmakananpokok) $alternatif[0][$i]  = $tmakananpokok;
-			if ($alternatif[0][$i + 1] > $tsumberhewani) $alternatif[0][$i + 1]  = $tsumberhewani;
-			if ($alternatif[0][$i + 2] > $tsumbernabati) $alternatif[0][$i + 2]  = $tsumbernabati;
-			if ($alternatif[0][$i + 3] > $tsayuran) $alternatif[0][$i + 3]  = $tsayuran;
-			if ($alternatif[0][$i + 4] > $tbuah) $alternatif[0][$i + 4]  = $tbuah;
-		}
-
-		// Memperbaharui variable makanan setelah proses penghapusan diatas
-		$makanan = array(
-			'makananpokok' => $makananpokok,
-			'sumberhewani' => $sumberhewani,
-			'sumbernabati' => $sumbernabati,
-			'sayuran' => $sayuran,
-			'buah' => $buah
-		);
-
-		// Memperbaharui variable batas setelah proses pengurangan total data makanan pada setiap kategori makanan diatas
-		$batas = array(
-			'1' => $tmakananpokok,
-			'2' => $tsumberhewani,
-			'3' => $tsumbernabati,
-			'4' => $tsayuran,
-			'5' => $tbuah,
-			'6' => $tmakananpokok,
-			'7' => $tsumberhewani,
-			'8' => $tsumbernabati,
-			'9' => $tsayuran,
-			'10' => $tbuah,
-			'11' => $tmakananpokok,
-			'12' => $tsumberhewani,
-			'13' => $tsumbernabati,
-			'14' => $tsayuran,
-			'15' => $tbuah,
-		);
-
-		// Menghitung ulang nilai fitness
-		$this->menghitung_fitness($alternatif, $KebutuhanPasien, $makanan);
-
-		// Memproses alternatif 2 dengan algoritma VNS saja
-		$this->vns($alternatif, $parametervns, $batas, $KebutuhanPasien, $makanan);
-
-		$data[2] = $alternatif[0];
-
-		// Mengganti gen yang berupa integer menjadi data makanan pada setiap kategori
-		for ($in = 1; $in <= 15; $in = $in + 5) {
-			//Individu terbaik 1
-			$data[2][$in] = $makananpokok[$data[2][$in] - 1];
-			$data[2][$in + 1] = $sumberhewani[$data[2][$in + 1] - 1];
-			$data[2][$in + 2] = $sumbernabati[$data[2][$in + 2] - 1];
-			$data[2][$in + 3] = $sayuran[$data[2][$in + 3] - 1];
-			$data[2][$in + 4] = $buah[$data[2][$in + 4] - 1];
-		}
-
-		// Perhitungan selisih dalam persen (%) kecuali natrium Individu terbaik 2
-		$selisihKarbo = round(($data[2]['pinaltiKarbo'] / $KebutuhanPasien['karbohidrat']) * 100, 2);
-		$selisihProtein = round(($data[2]['pinaltiProtein'] / $KebutuhanPasien['protein']) * 100, 2);
-		$selisihLemak = round(($data[2]['pinaltiLemak'] / $KebutuhanPasien['lemak']) * 100, 2);
-		$selisihNatrium = abs($data[2]['totalNatrium'] - $KebutuhanPasien['natrium2']);
-		$selisihKalori = round(($data[2]['pinaltiKalori'] / $KebutuhanPasien['kalori']) * 100, 2);
-		$selisihKalium = round(($data[2]['pinaltiKalium'] / ($KebutuhanPasien['kalium'])) * 100, 2);
-
-		$data[2]['selisihKarbo'] = $selisihKarbo;
-		$data[2]['selisihProtein'] = $selisihProtein;
-		$data[2]['selisihLemak'] = $selisihLemak;
-		$data[2]['selisihNatrium'] = $selisihNatrium;
-		$data[2]['selisihKalori'] = $selisihKalori;
-		$data[2]['selisihKalium'] = $selisihKalium;
-
+		$data['selisihKarbo'] = $selisihKarbo;
+		$data['selisihProtein'] = $selisihProtein;
+		$data['selisihLemak'] = $selisihLemak;
+		$data['selisihNatrium'] = $selisihNatrium;
+		$data['selisihKalori'] = $selisihKalori;
+		$data['selisihKalium'] = $selisihKalium;
+		$data['waktu'] = $lama;
+		$data['hasil'] = $fitness;
 
 		return $data;
 	}
